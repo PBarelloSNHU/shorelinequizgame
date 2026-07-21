@@ -53,12 +53,12 @@ jobs:
       
       -name: Set cache dependency path 
       uses: actions/checkout@v4
-      uses: actions/setup-node@v4
-      with:
+      uses: actions/setup-node@v4 with:
           node-version: 24
-      cache: 'npm'
-      cache-dependency-path: host-client/package-lock.json
-
+      run: npm install
+      working-directory: host-client
+      run: npm run build
+      working-directory: host-client
 
   deploy:
     needs: build
