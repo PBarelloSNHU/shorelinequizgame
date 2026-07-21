@@ -12,8 +12,13 @@ import { supabase } from './supabaseClient.js'
  * right now" indicator (no DB write needed just to show a green dot).
  */
 export function joinSessionChannel(sessionId, { presenceKey, presencePayload, onChange, onPresenceSync }) {
+  // `private: true` is required for the channel to be subject to the
+  // Realtime Authorization RLS policies on realtime.messages (see
+  // supabase/migrations/0001_init.sql §7) — without it, RLS is skipped
+  // entirely and the broadcast-from-database triggers will never reach
+  // this client.
   const channel = supabase.channel(`session:${sessionId}`, {
-    config: { presence: { key: presenceKey } },
+    config: { private: true, presence: { key: presenceKey } },
   })
 
   // realtime.broadcast_changes() sends the SQL operation (INSERT/UPDATE) as

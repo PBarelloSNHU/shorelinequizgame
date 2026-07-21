@@ -11,9 +11,22 @@ export const supabase = createClient(
 // This is what makes "rejoin after refresh" work without a custom token.
 export async function ensureAnonymousSession() {
   const { data } = await supabase.auth.getSession()
-  if (data.session) return data.session
+  let session = data.session
 
-  const { data: signIn, error } = await supabase.auth.signInAnonymously()
-  if (error) throw error
-  return signIn.session
+  if (!session) {
+    const { data: signIn, error } = await supabase.auth.signInAnonymously()
+    if (error) throw error
+    session = signIn.session
+  }
+
+  // Realtime private channels (see realtimeChannel.js) are authorized by
+  // evaluating RLS policies against the connected user's JWT. supabase-js
+  // syncs this automatically on auth state changes in most versions, but
+  // we set it explicitly here too so the very first channel.subscribe()
+  // call — which can race the auth listener — always has a token to check.
+  if (session?.access_token) {
+    supabase.realtime.setAuth(session.access_token)
+  }
+
+  return session
 }

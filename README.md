@@ -46,6 +46,26 @@ and `player-client/` as two separate static sites (GitHub Pages, Netlify,
 Vercel, or Cloudflare Pages all work — no server process to keep running).
 Set the same environment variables in each platform's dashboard.
 
+## Troubleshooting
+
+- **`ERROR: 42501: must be owner of table messages` when running the
+  migration.** This means the SQL editor tried to run
+  `alter table realtime.messages enable row level security;`. That line has
+  been removed from `0001_init.sql` — `realtime.messages` is a
+  Supabase-internal table with RLS already enabled by default, and no role
+  available in the SQL editor owns it, so the `ALTER TABLE` itself always
+  fails. If you're re-running an older copy of the migration, delete that
+  one line and re-run; the `CREATE POLICY` statements below it are fine to
+  run as-is. See [Supabase's Realtime Authorization docs](https://supabase.com/docs/guides/realtime/authorization).
+- **Host/player never receive session updates, or `channel.track()`
+  presence silently does nothing.** Double-check the channel is opened with
+  `config: { private: true }` (see `realtimeChannel.js` in both apps) —
+  non-private channels skip Realtime Authorization RLS entirely, so
+  broadcast-from-database messages never reach a non-private subscriber.
+  Also confirm `supabase.realtime.setAuth(session.access_token)` runs after
+  `signInAnonymously()` (in `supabaseClient.js`) so the socket has a JWT to
+  check policies against.
+
 ## What's a sketch vs. production-ready
 
 - `supabase/seed.sql` only has a handful of questions per CASAS level —

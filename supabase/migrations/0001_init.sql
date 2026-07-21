@@ -366,16 +366,36 @@ create trigger trg_broadcast_responses
 -- ---------------------------------------------------------------------
 -- 7. Realtime Authorization
 --
--- Deny direct client broadcast sends — only the trigger functions above
--- (running as the table owner, not as a connected client) may publish.
--- This is what stops a player's browser from forging a fake reveal /
--- scoreboard event by calling channel.send() directly.
+-- IMPORTANT: do NOT run `alter table realtime.messages enable row level
+-- security` — that table is owned internally by Supabase and even the
+-- `postgres` role in the SQL editor is not its owner, so the ALTER fails
+-- with "must be owner of table messages" (42501). RLS is already ON by
+-- default for realtime.messages on every Supabase project; you only need
+-- to add policies. See: https://supabase.com/docs/guides/realtime/authorization
+--
+-- Both the client's channel subscription (host and player) must be opened
+-- with `{ config: { private: true } }` for these policies to be evaluated
+-- at all — a non-private channel skips RLS entirely and will silently miss
+-- the broadcast-from-database messages published in §6.
+--
+-- realtime.messages has an `extension` column set to either 'broadcast' or
+-- 'presence'. We split the policies on it:
+--   - SELECT is open to any authenticated client for both extensions, so
+--     everyone can receive session-state broadcasts AND presence sync.
+--   - INSERT is allowed ONLY for extension = 'presence', so clients can
+--     call channel.track() for the "who's connected" roster, but cannot
+--     insert fake 'broadcast' rows themselves — only the SECURITY DEFINER
+--     trigger functions in §6 (which run outside RLS) can publish those.
+--     This is what stops a player's browser from forging a fake reveal /
+--     scoreboard event.
 -- ---------------------------------------------------------------------
 
-alter table realtime.messages enable row level security;
-
-create policy "authenticated can receive session broadcasts"
+create policy "authenticated can receive broadcast and presence"
   on realtime.messages for select
-  using (auth.role() = 'authenticated');
+  to authenticated
+  using ( true );
 
--- Deliberately no insert policy for 'authenticated' on realtime.messages.
+create policy "authenticated can send presence only"
+  on realtime.messages for insert
+  to authenticated
+  with check ( extension = 'presence' );
