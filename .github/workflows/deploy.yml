@@ -14,6 +14,8 @@ permissions:
   pages: write
   id-token: write
 
+
+
 # Allow only one concurrent deployment, skipping runs queued between the
 # in-progress run and latest queued. Do not cancel in-progress runs as we
 # want to allow production deployments to complete.
@@ -48,6 +50,15 @@ jobs:
         with:
           # Vite's default build output directory
           path: ./dist
+      
+      -name: Set cache dependency path 
+      uses: actions/checkout@v4
+      uses: actions/setup-node@v4
+      with:
+          node-version: 24
+      cache: 'npm'
+      cache-dependency-path: host-client/package-lock.json
+
 
   deploy:
     needs: build
