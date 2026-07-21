@@ -1,24 +1,15 @@
 name: Deploy to GitHub Pages
 
 on:
-  # Runs on every push to the main branch
   push:
     branches: [main]
-
-  # Allows manual triggering from the Actions tab
   workflow_dispatch:
 
-# Grant the GITHUB_TOKEN the permissions required to deploy to Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-
-
-# Allow only one concurrent deployment, skipping runs queued between the
-# in-progress run and latest queued. Do not cancel in-progress runs as we
-# want to allow production deployments to complete.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -33,13 +24,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
+          cache-dependency-path: host-client/package-lock.json
 
       - name: Install dependencies
+        working-directory: host-client
         run: npm ci
 
       - name: Build project
+        working-directory: host-client
         run: npm run build
 
       - name: Setup GitHub Pages
@@ -48,17 +42,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Vite's default build output directory
-          path: ./dist
-      
-      -name: Set cache dependency path 
-      uses: actions/checkout@v4
-      uses: actions/setup-node@v4 with:
-          node-version: 24
-      run: npm install
-      working-directory: host-client
-      run: npm run build
-      working-directory: host-client
+          path: host-client/dist
 
   deploy:
     needs: build
