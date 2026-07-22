@@ -95,6 +95,11 @@ create policy "read scores"   on quiz_scores   for select using (auth.role() = '
 -- privileges, i.e. bypass RLS, because migrations run as the `postgres`
 -- superuser which has BYPASSRLS by default on Supabase).
 
+grant select on quiz_sessions to authenticated;
+grant select on quiz_players to authenticated;
+grant select on quiz_scores to authenticated;
+
+
 -- ---------------------------------------------------------------------
 -- 3. Helper functions
 -- ---------------------------------------------------------------------
